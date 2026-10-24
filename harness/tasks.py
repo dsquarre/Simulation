@@ -200,8 +200,14 @@ def box_packing_task(seed):
     return _bpt(seed)
 
 
+def blinkit_rebalance_task(seed):
+    from .blinkit_rebalance import blinkit_rebalance_task as _brt
+    return _brt(seed)
+
+
 TASKS = {
     "box_packing": box_packing_task,
+    "blinkit_rebalance": blinkit_rebalance_task,
     "slugify": slugify_task,
     "parse_duration": duration_task,
     "merge_intervals": intervals_task,

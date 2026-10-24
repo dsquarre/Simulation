@@ -189,11 +189,12 @@ docker builder prune -af && time docker compose build --no-cache
 
 ## Task Set & Difficulties
 
-The environment includes **6 tasks across 3 difficulty levels**, satisfying and exceeding the hackathon minimum specification (5+ tasks across 2+ difficulties). Every task includes a reference solution (oracle $\ge 0.95$) and a no-op baseline ($\le 0.05$):
+The environment includes **7 tasks across 3 difficulty levels**, satisfying and exceeding the hackathon minimum specification (5+ tasks across 2+ difficulties). Every task includes a reference solution (oracle $\ge 0.95$) and a no-op baseline ($\le 0.05$):
 
 | Task ID | Domain | Difficulty | Type | Description |
 | :--- | :--- | :---: | :---: | :--- |
 | `box_packing` *(Demo)* | Combinatorial Ops | **Hard** | Dynamic Seeded | NP-hard box packing with conflict graph; verified via exact Branch & Bound |
+| `blinkit_rebalance` | Quick-Commerce Ops | **Hard** | Dynamic Seeded | NP-hard Multi-Commodity Capacitated Dark Store Inventory Rebalancing & Dispatch Routing |
 | `bulk_discount` | Business Logic | **Medium** | Seeded Variant | Order tiered discount calculation with floating point edge cases |
 | `merge_intervals` | Algorithms | **Medium** | Standard | Overlapping and contiguous range interval merging |
 | `lru_cache` | Data Structures | **Medium** | Standard | Cache eviction policy with $O(1)$ amortized access |

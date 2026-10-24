@@ -88,14 +88,13 @@ class MockClient:
         self.turn += 1
         calls = []
         if self.kind == "solver" and self.turn == 1:
-            if self.task and self.task.task_id == "box_packing":
+            if self.task and self.task.task_id in ("box_packing", "blinkit_rebalance"):
                 print("\n" + "=" * 70, flush=True)
-                print(" [HUMAN AS LLM INTERACTIVE SOLVER]", flush=True)
+                print(f" [HUMAN AS LLM INTERACTIVE SOLVER - {self.task.task_id}]", flush=True)
                 print("=" * 70, flush=True)
                 print(self.task.instructions, flush=True)
                 print("=" * 70, flush=True)
-                print("Enter your solution JSON (e.g. [[0, 2], [1, 3], ...])", flush=True)
-                print("or press Enter to submit oracle reference solution directly:", flush=True)
+                print("Enter your solution JSON (or press Enter to submit oracle reference solution directly):", flush=True)
                 try:
                     user_str = input("> ").strip()
                 except (EOFError, OSError):
@@ -105,14 +104,14 @@ class MockClient:
                     try:
                         parsed = json.loads(user_str)
                         if isinstance(parsed, list):
-                            content = json.dumps({"boxes": parsed}, indent=2)
-                        elif isinstance(parsed, dict) and "boxes" in parsed:
+                            key = "deliveries" if self.task.task_id == "blinkit_rebalance" else "boxes"
+                            content = json.dumps({key: parsed}, indent=2)
+                        elif isinstance(parsed, dict):
                             content = json.dumps(parsed, indent=2)
                         else:
                             content = user_str
                     except Exception as err:
                         print(f"\n⚠️  JSON Syntax Error: {err}", flush=True)
-                        print("   Make sure all brackets match and all items are in lists, e.g. [[0, 1], [2], ...]", flush=True)
                         content = user_str
                 else:
                     content = self.task.reference.get("solution.json", "{}")
