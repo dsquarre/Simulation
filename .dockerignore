@@ -1,0 +1,8 @@
+.env
+.git
+logs
+inputs
+**/__pycache__
+**/*.pyc
+*.pdf
+*.zip

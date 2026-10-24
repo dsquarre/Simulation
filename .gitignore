@@ -1,0 +1,8 @@
+.env
+logs/*
+!logs/.gitkeep
+inputs/*
+!inputs/README.md
+!inputs/.gitkeep
+__pycache__/
+*.pyc

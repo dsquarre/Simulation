@@ -1,0 +1,15 @@
+# The harness: runs the baseline checks, then the model, and owns the verifier.
+FROM python:3.12-slim
+WORKDIR /app
+# Long timeout and retries so a slow or flaky link to PyPI doesn't fail the build.
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_RETRIES=10 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+COPY requirements.txt .
+# The cache mount keeps downloaded wheels between rebuilds without putting them in the image.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
+COPY harness ./harness
+CMD ["python", "-m", "harness.run"]

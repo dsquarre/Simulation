@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RL Environment & Architecture Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1a2333;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(99, 102, 241, 0.35);
+      --primary: #6366f1;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --code-bg: #030712;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.65;
+      padding: 3rem 1.5rem;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.18), transparent),
+        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.08), transparent);
+    }
+
+    .container { max-width: 960px; margin: 0 auto; }
+
+    header {
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      margin-bottom: 0.75rem;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 40%, #9ca3af 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* Architecture Diagram */
+    .arch-diagram {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-accent);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .arch-diagram {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .arch-arrow {
+        transform: rotate(90deg);
+        margin: 0 auto;
+      }
+    }
+
+    .arch-box {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .arch-box.harness { border-color: rgba(99, 102, 241, 0.5); }
+    .arch-box.sandbox { border-color: rgba(16, 185, 129, 0.5); }
+    .arch-box.model { border-color: rgba(6, 182, 212, 0.5); }
+
+    .arch-box h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .arch-box p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .arch-arrow {
+      color: var(--text-dim);
+      font-weight: bold;
+      font-size: 1.25rem;
+      text-align: center;
+    }
+
+    /* Content Cards */
+    .section-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      margin-bottom: 1.75rem;
+      overflow: hidden;
+    }
+
+    .section-card-header {
+      padding: 1.2rem 1.5rem;
+      background: var(--bg-surface-elevated);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-card-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .section-body {
+      padding: 1.5rem;
+    }
+
+    .q-and-a {
+      margin-bottom: 1.5rem;
+    }
+
+    .q-and-a:last-child {
+      margin-bottom: 0;
+    }
+
+    .question {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #38bdf8;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .answer {
+      color: #d1d5db;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .callout {
+      border-left: 3px solid var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.08);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      color: #bae6fd;
+    }
+
+    .callout.amber {
+      border-left-color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.08);
+      color: #fde68a;
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #a7f3d0;
+      margin: 0.75rem 0;
+      overflow-x: auto;
+    }
+
+    .badge-pill {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .pill-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .pill-emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .pill-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+
+    /* Comparison Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        RL Environment Explained
+      </div>
+      <h1>How the RL Environment Actually Works</h1>
+      <p class="subtitle">Demystifying where files live, who creates tools, how GPT-Luna solves the problem, and how Phase 2 stays verifiable without excessive complexity.</p>
+    </header>
+
+    <!-- Architecture Diagram -->
+    <div class="arch-diagram">
+      <div class="arch-box harness">
+        <span class="badge-pill pill-purple">Container 1</span>
+        <h4 style="margin-top: 0.5rem; color: #c084fc;">Harness Container</h4>
+        <p>Holds <strong>verifier code</strong>, problem generator, ground truth branch-and-bound solver, & telemetry logger.</p>
+      </div>
+      <div class="arch-arrow">&harr;</div>
+      <div class="arch-box sandbox">
+        <span class="badge-pill pill-emerald">Container 2 (Isolated)</span>
+        <h4 style="margin-top: 0.5rem; color: #34d399;">Sandbox Container</h4>
+        <p>Isolated workspace (<code>/workspace</code>). Holds <code>problem.json</code> and tool executor. No internet.</p>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-box model">
+        <span class="badge-pill pill-blue">External API</span>
+        <h4 style="margin-top: 0.5rem; color: #60a5fa;">GPT-Luna / LLM</h4>
+        <p>Cloud model receiving prompt & tool schemas; returns tool call actions.</p>
+      </div>
+    </div>
+
+    <!-- Section 1: Where do tools & files come from? -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <h2>1. Who Gives the Tools & Where is problem.json?</h2>
+        <span class="badge-pill pill-blue">Architecture</span>
+      </div>
+      <div class="section-body">
+        <div class="q-and-a">
+          <div class="question">Q: Is problem.json stored on the external server where the API is hosted?</div>
+          <div class="answer">
+            <strong>No!</strong> The external API (GPT-Luna) does not store any files. It only receives conversational text and tool descriptions.
+            <br><br>
+            All files are created locally by <strong>YOUR repo</strong> inside your Docker containers:
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+              <li>When the harness resets with <code>SEED=0</code>, it generates the mathematical problem instance in memory (weights, capacity, conflicts).</li>
+              <li>The harness sends a reset payload to the <strong>Sandbox container</strong> via local HTTP (<code>http://sandbox:8000/reset</code>).</li>
+              <li>The Sandbox writes <code>problem.json</code> into its local directory (<code>/workspace/problem.json</code>).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="q-and-a">
+          <div class="question">Q: Who gave list_files, read_file, and run_python?</div>
+          <div class="answer">
+            <strong>Your harness defined them!</strong> In <code>harness/tools.py</code>, you declare OpenAI function definitions:
+            <div class="code-block">TOOLS = [
+  {"name": "list_files", "description": "List every file in the project."},
+  {"name": "read_file",  "description": "Read a text file from the project."},
+  {"name": "write_file", "description": "Create or overwrite a text file in the project."},
+  {"name": "run_python", "description": "Run Python code and return its stdout."},
+  {"name": "finish",     "description": "Call this when the task is complete."}
+]</div>
+            When the harness calls GPT-Luna, it passes this list of tools under the <code>tools</code> parameter. GPT-Luna chooses which tool to call, and your local sandbox executes it.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: How GPT-Luna Solved It -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <h2>2. How Did GPT-Luna Solve the Problem?</h2>
+        <span class="badge-pill pill-emerald">Live Trace Breakdown</span>
+      </div>
+      <div class="section-body">
+        <p>In our live test run, GPT-Luna completed the task in 6 steps. Here is its exact strategy:</p>
+        
+        <table style="margin-top: 1rem;">
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Action Taken</th>
+              <th>Model's Objective</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1 & 2</strong></td>
+              <td><code>list_files</code> & <code>read_file(problem.json)</code></td>
+              <td>Discovers the files in the workspace and parses weights, capacity (138), and item conflict pairs.</td>
+            </tr>
+            <tr>
+              <td><strong>3</strong></td>
+              <td><code>run_python(code=...)</code></td>
+              <td><strong>The Crucial Step:</strong> Rather than calculating manually, GPT-Luna wrote a recursive backtracking depth-first-search solver in Python and executed it inside the sandbox. In 50ms, Python printed the optimal packing: <code>[([13, 12], 130), ([0, 4], 124), ...]</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>4</strong></td>
+              <td><code>write_file(solution.json)</code></td>
+              <td>Writes the 6 packed boxes into <code>solution.json</code> as requested by the instructions.</td>
+            </tr>
+            <tr>
+              <td><strong>5</strong></td>
+              <td><code>run_python(code=validator)</code></td>
+              <td>Runs a second self-check script asserting no item is missing, no box exceeds 138, and no conflicting pairs share a box.</td>
+            </tr>
+            <tr>
+              <td><strong>6</strong></td>
+              <td><code>finish()</code></td>
+              <td>Calls finish tool. Harness invokes the hidden verifier &rarr; 100% score (1.0).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout amber">
+          <strong>Key Insight:</strong> When an RL environment provides <code>run_python</code> (arbitrary code execution), modern reasoning LLMs will use Python to bypass the reasoning bottleneck. This is why it scored 100% easily!
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Phase 2 - Farm / Economy without over-complication -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <h2>3. Phase 2: Farm/Economy Without Over-Complication</h2>
+        <span class="badge-pill pill-purple">Rules & Optimal Solvers</span>
+      </div>
+      <div class="section-body">
+        <div class="q-and-a">
+          <div class="question">The Hackathon Golden Rule:</div>
+          <div class="answer">
+            According to the hackathon specification (Section 04), <strong>every single task must have an exact Oracle reference solution that scores &ge; 0.95 in under 2 minutes</strong>.
+            <br>
+            If the game is too chaotic or computationally intractable, you cannot write an oracle that guarantees full marks for every random seed.
+          </div>
+        </div>
+
+        <div class="q-and-a">
+          <div class="question">The Clean Design: Box Packing &rarr; Farm Storage & Shipment Simulation</div>
+          <div class="answer">
+            Instead of building an open-world RPG, map the mathematical problem directly into farm/economy semantics:
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 1.7;">
+              <li><strong>Items</strong> &rarr; <strong>Harvested Goods / Crops</strong> (e.g. Wheat, Apples, Melons) with harvest yields (weights).</li>
+              <li><strong>Boxes</strong> &rarr; <strong>Transport Trucks / Grain Silos</strong> with maximum cargo capacity.</li>
+              <li><strong>Conflicts</strong> &rarr; <strong>Agricultural Contamination Constraints</strong> (e.g., ethylene-emitting apples spoil nearby vegetables, or flammable chemical fertilizers cannot travel in the same truck as grain).</li>
+              <li><strong>Multi-Step Game Turns</strong> &rarr; Instead of writing raw python in one shot, the agent plays across <strong>Days / Turns</strong>:
+                <br>• Turn 1: <code>inspect_inventory</code> (sees today's harvest & cargo orders).
+                <br>• Turn 2: <code>load_truck(truck_id, item_id)</code>.
+                <br>• Turn 3: <code>dispatch_truck(truck_id)</code>.
+                <br>• Turn 4: <code>advance_day()</code>.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong>Why this is guaranteed to work:</strong>
+          Because under the hood, the underlying state space remains a constrained bin-packing optimization. Your existing branch-and-bound solver still computes the exact optimal solution in &lt; 25ms, giving you a 100% reliable <strong>Oracle Baseline</strong> for every seed, while providing judges with an engaging <strong>Games & World Simulation</strong>!
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      RL Environment Template &bull; Architecture & Design Guide
+    </footer>
+  </div>
+</body>
+</html>
