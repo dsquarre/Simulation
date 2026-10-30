@@ -72,7 +72,9 @@ class OpenAIClient:
 class MockClient:
     """Offline stand-ins so the template runs with no API key.
 
-    mock/solver  writes the reference solution, then finishes.
+    mock/solver  you play as the model: crop_planning asks for one season at a time and sends it
+                 through plant_season; box_packing asks for the whole packing. Pressing Enter
+                 (or no terminal) submits the reference answer.
     mock/idle    finishes immediately without doing anything.
     """
 
@@ -87,17 +89,16 @@ class MockClient:
     def complete(self, messages, tools, timeout):
         self.turn += 1
         calls = []
-        if self.kind == "solver" and self.turn == 1:
-            if self.task and self.task.task_id in ("box_packing", "crop_planning"):
+        if self.kind == "solver" and self.task and self.task.task_id == "crop_planning":
+            calls = self._crop_turn(messages)
+        elif self.kind == "solver" and self.turn == 1:
+            if self.task and self.task.task_id == "box_packing":
                 print("\n" + "=" * 70, flush=True)
                 print(f" [HUMAN AS LLM INTERACTIVE SOLVER - {self.task.task_id.upper()}]", flush=True)
                 print("=" * 70, flush=True)
                 print(self.task.instructions, flush=True)
                 print("=" * 70, flush=True)
-                if self.task.task_id == "box_packing":
-                    print("Enter your solution JSON (e.g. [[0, 2], [1, 3], ...])", flush=True)
-                else:
-                    print('Enter your solution JSON (e.g. [{"season": 1, "cells": {"rice": 12, ...}}, ...])', flush=True)
+                print("Enter your solution JSON (e.g. [[0, 2], [1, 3], ...])", flush=True)
                 print("or press Enter to submit oracle reference solution directly:", flush=True)
                 try:
                     user_str = input("> ").strip()
@@ -107,20 +108,12 @@ class MockClient:
                 if user_str:
                     try:
                         parsed = json.loads(user_str)
-                        if self.task.task_id == "box_packing":
-                            if isinstance(parsed, list):
-                                content = json.dumps({"boxes": parsed}, indent=2)
-                            elif isinstance(parsed, dict) and "boxes" in parsed:
-                                content = json.dumps(parsed, indent=2)
-                            else:
-                                content = user_str
+                        if isinstance(parsed, list):
+                            content = json.dumps({"boxes": parsed}, indent=2)
+                        elif isinstance(parsed, dict) and "boxes" in parsed:
+                            content = json.dumps(parsed, indent=2)
                         else:
-                            if isinstance(parsed, list):
-                                content = json.dumps({"seasons": parsed}, indent=2)
-                            elif isinstance(parsed, dict) and "seasons" in parsed:
-                                content = json.dumps(parsed, indent=2)
-                            else:
-                                content = user_str
+                            content = user_str
                     except Exception as err:
                         print(f"\n⚠️  JSON Syntax Error: {err}", flush=True)
                         content = user_str
@@ -139,6 +132,30 @@ class MockClient:
                       for i, (name, args) in enumerate(calls)]
         return Reply(text=None, tool_calls=tool_calls, raw=json.dumps({"mock": self.kind, "turn": self.turn}))
 
+    def _crop_turn(self, messages):
+        """One season per turn: show what a model would see, read one allocation, plant it."""
+        if self.turn == 1:
+            print("\n" + "=" * 70 + "\n [YOU ARE THE MODEL - CROP_PLANNING]\n" + "=" * 70, flush=True)
+            print(f"[system]\n{messages[0]['content']}\n\n[user]\n{messages[1]['content']}", flush=True)
+        else:
+            last = max(i for i, m in enumerate(messages) if m["role"] == "assistant")
+            for m in messages[last + 1:]:
+                print(f"\n[{m['role']}]\n{m['content']}", flush=True)
+        if self.task.is_finished:
+            return [("finish", {})]
+        season = self.task.current_season
+        best = json.dumps(self.task.inst["optimal_schedule"][season - 1])
+        print("=" * 70, flush=True)
+        print(f'Season {season} allocation as JSON, e.g. {{"rice": 10, "soybean": 8}}', flush=True)
+        print(f"Enter = optimal move {best}   |   finish = stop now", flush=True)
+        try:
+            text = input("> ").strip()
+        except (EOFError, OSError):
+            text = ""
+        if text == "finish":
+            return [("finish", {})]
+        return [("plant_season", {"allocation": text or best})]
+
 
 def make_client(model, api_key, base_url, max_tokens=None):
     if model.startswith("mock/"):
@@ -154,6 +171,8 @@ def make_client(model, api_key, base_url, max_tokens=None):
 # -------------------------------------------------------------- baselines
 def oracle_actions(task):
     """The reference solution as a list of (tool, args) actions. Must score full marks."""
+    if hasattr(task, "oracle_actions"):
+        return task.oracle_actions()
     return [("write_file", {"path": path, "content": content}) for path, content in task.reference.items()]
 
 

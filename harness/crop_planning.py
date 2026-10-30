@@ -70,6 +70,13 @@ NITROGEN_DELTA = {
 }
 
 
+SYSTEM_PROMPT = (
+    "You are a farm planning agent managing land over 10 seasons. Each season, choose how many cells "
+    "to plant with each allowed crop and call `plant_season`. Prices are revealed only after each "
+    "harvest. You may use `run_python` to calculate before you commit. After season 10, call `finish`."
+)
+
+
 def get_yield_multiplier(nitrogen: float) -> float:
     """Compute crop yield multiplier based on soil nitrogen index in [0, 100]."""
     if nitrogen <= 0:
@@ -322,7 +329,8 @@ def generate_crop_planning_instance(seed_val) -> dict:
 class CropPlanningTaskInstance(TaskInstance):
     """TaskInstance with active server-side state tracking for plant_season tool."""
 
-    def __init__(self, inst, task_id, title, difficulty, instructions, files, cases, reference):
+    def __init__(self, inst, task_id, title, difficulty, instructions, files, cases, reference,
+                 system_prompt="", closing=""):
         super().__init__(
             task_id=task_id,
             title=title,
@@ -331,6 +339,8 @@ class CropPlanningTaskInstance(TaskInstance):
             files=files,
             cases=cases,
             reference=reference,
+            system_prompt=system_prompt,
+            closing=closing,
         )
         self.inst = inst
         self.A = self.inst["land_cells"]
@@ -351,6 +361,14 @@ class CropPlanningTaskInstance(TaskInstance):
         self.log = []
         self.history = list(self.inst["prior_price_history"])
         self.is_finished = False
+
+    def played_solution(self) -> str:
+        """solution.json content for the seasons actually played through plant_season."""
+        return json.dumps({"seasons": self.log}, indent=2)
+
+    def oracle_actions(self):
+        """The precomputed optimal schedule, submitted one season at a time like an agent would."""
+        return [("plant_season", {"allocation": json.dumps(alloc)}) for alloc in self.inst["optimal_schedule"]]
 
     def handle_tool(self, tool_name: str, args: dict, env) -> tuple[bool, str, bool]:
         """Intercept plant_season tool call on the harness server side."""
@@ -649,19 +667,19 @@ def crop_planning_task(seed) -> CropPlanningTaskInstance:
         role = "Cash Crop" if c in CASH_CROPS else ("Staple" if c in STAPLE_CROPS else "Pulse/Oilseed")
         n_sign = f"+{n_deltas[c]}" if n_deltas[c] > 0 else f"{n_deltas[c]}"
         kharif_rows.append(f"  - {c:<10} [{role:<13}]: water={waters[c]:>2}, cost={costs[c]:>2}, nitrogen={n_sign:>2}/cell")
-    kharif_desc = "\n".join(kharif_rows)
+    kharif_desc = "\n        ".join(kharif_rows)
 
     rabi_rows = []
     for c in RABI_CROPS:
         role = "Cash Crop" if c in CASH_CROPS else ("Staple" if c in STAPLE_CROPS else "Pulse/Oilseed")
         n_sign = f"+{n_deltas[c]}" if n_deltas[c] > 0 else f"{n_deltas[c]}"
         rabi_rows.append(f"  - {c:<10} [{role:<13}]: water={waters[c]:>2}, cost={costs[c]:>2}, nitrogen={n_sign:>2}/cell")
-    rabi_desc = "\n".join(rabi_rows)
+    rabi_desc = "\n        ".join(rabi_rows)
 
     prior_lines = []
     for entry in prior_hist:
         prior_lines.append(f"  Season {entry['past_season']}: " + ", ".join(f"{c}: {p}" for c, p in entry["prices"].items()))
-    prior_desc = "\n".join(prior_lines)
+    prior_desc = "\n        ".join(prior_lines)
 
     instructions = textwrap.dedent(f"""
         Multi-Season Crop Rotation & Market POMDP with Dynamic Soil Nitrogen:
@@ -673,10 +691,10 @@ def crop_planning_task(seed) -> CropPlanningTaskInstance:
 
         CROP RESOURCE REQUIREMENTS & ECONOMIC PROFILES:
         * Kharif Season Crops (Odd Seasons 1, 3, 5, 7, 9):
-{kharif_desc}
+        {kharif_desc}
 
         * Rabi Season Crops (Even Seasons 2, 4, 6, 8, 10):
-{rabi_desc}
+        {rabi_desc}
 
         SOIL NITROGEN DYNAMICS & YIELD MULTIPLIER:
         - Soil Nitrogen S_t is a continuous index in [0, 100], starting at S_1 = 50.
@@ -694,7 +712,7 @@ def crop_planning_task(seed) -> CropPlanningTaskInstance:
           * You must submit `allocation='{{}}'` (all land idle) to let the land regenerate naturally.
 
         HISTORICAL MARKET PRICES (Past Records for Season -1 and Season 0):
-{prior_desc}
+        {prior_desc}
 
         SEASON 1 INITIAL STATUS (KHARIF):
         - Available Land: {A} cells
@@ -726,4 +744,6 @@ def crop_planning_task(seed) -> CropPlanningTaskInstance:
         reference={
             "solution.json": reference_solution,
         },
+        system_prompt=SYSTEM_PROMPT,
+        closing="Plant Season 1 now by calling `plant_season`.",
     )

@@ -26,9 +26,9 @@ class Env:
         """Start a clean episode. The same (task_id, seed) always gives the same start."""
         self.task = build_task(task_id, seed)
         self._post("/reset", {"files": self.task.files}, self.tool_timeout)
-        return (f"Task: {self.task.instructions}\n\n"
-                "The project is in the current directory. Use the tools to look at the files, "
-                "make your changes and test them, then call `finish`.")
+        closing = self.task.closing or ("The project is in the current directory. Use the tools to look at "
+                                        "the files, make your changes and test them, then call `finish`.")
+        return f"Task: {self.task.instructions}\n\n{closing}"
 
     # ----------------------------------------------------------------- step
     def step(self, name, args):
@@ -53,6 +53,11 @@ class Env:
           no_regressions = 0.3 x share of regression checks that pass, but only
                            in proportion to target progress, so doing nothing earns 0
         """
+        if hasattr(self.task, "played_solution"):
+            # Tasks played through a tool are scored on the harness-side record of what was
+            # played. Rewriting the file here undoes any edit the agent made to it.
+            self._post("/tool", {"name": "write_file", "args": {"path": "solution.json",
+                       "content": self.task.played_solution()}}, self.tool_timeout)
         cases = self.task.cases
         results = self._post("/verify", {"cases": [c.code for c in cases]}, self.verify_timeout)["results"]
         tally = {"target": [0, 0], "regression": [0, 0]}

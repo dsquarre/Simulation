@@ -24,6 +24,8 @@ class TaskInstance:
     files: dict      # starting files the agent can see
     cases: list      # hidden checks (list of Case)
     reference: dict  # files that solve the task; used by the oracle baseline
+    system_prompt: str = ""  # replaces runner.SYSTEM_PROMPT when set
+    closing: str = ""        # replaces the default last line of the first user message when set
 
 
 def _case(group, code, expect):

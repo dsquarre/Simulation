@@ -195,10 +195,15 @@ def main():
 
 
 def run_model(env, task_id, seed, client, model, append_text, limits, log_path):
-    print(f"\n== Model run: {model}  task={task_id}  seed={seed} ==", flush=True)
+    runner = setting("RUNNER", "loop")
+    if runner == "langgraph":
+        from .graph_runner import run_episode_graph as episode   # needs requirements-langgraph.txt
+    else:
+        episode = run_episode
+    print(f"\n== Model run: {model}  task={task_id}  seed={seed}  runner={runner} ==", flush=True)
     log = JsonlLog(log_path)
     try:
-        result = run_episode(env, task_id, seed, client, append_text, limits, log)
+        result = episode(env, task_id, seed, client, append_text, limits, log)
     finally:
         log.close()
     print(f"\ntermination: {result['termination']}   reward: {result['reward']}   steps: {result['steps']}",

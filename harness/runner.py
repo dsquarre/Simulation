@@ -106,7 +106,7 @@ def run_scripted(env, task_id, seed, actions, agent, log):
 def run_episode(env, task_id, seed, client, append_text, limits, log):
     prompt = env.reset(task_id, seed)
     client.start(env.task)
-    system = SYSTEM_PROMPT + (("\n\n" + append_text) if append_text else "")
+    system = (env.task.system_prompt or SYSTEM_PROMPT) + (("\n\n" + append_text) if append_text else "")
     messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
     started, termination, finished, steps = None, None, False, 0
 
