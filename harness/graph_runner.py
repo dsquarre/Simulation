@@ -114,7 +114,7 @@ def build_graph(env, client, task_id, seed, limits, log):
         return END if state["termination"] else "tools"
 
     def after_tools(state):
-        return END if state["finished"] or state["termination"] else "agent"
+        return END if state["finished"] or state["termination"]  else "agent"
 
     graph = StateGraph(EpisodeState)
     graph.add_node("agent", agent)

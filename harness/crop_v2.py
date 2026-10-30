@@ -16,7 +16,11 @@ from .crop_planning import (ALL_CROPS, CASH_CROPS, KHARIF_CROPS, NITROGEN_DELTA,
                             STAPLE_CROPS, get_yield_multiplier)
 
 NUM_SEASONS = 10
-SHOCKS = [-0.40, -0.20, 0.0, 0.25, 0.45]   # market-wide, one draw per season, scaled by crop volatility
+SHOCKS = [-0.40, -0.20, 0.0, 0.25, 0.45]   # shock values, scaled by crop volatility
+# Each season every crop's shock = MARKET_WEIGHT x one market-wide draw + CROP_WEIGHT x its own draw.
+# 0.6^2 + 0.8^2 = 1, so each crop's shock spread is the same as a single draw; only the share that
+# moves crops independently (and so can change which crop is best) is new. (rules version 2, 2026-10-31)
+MARKET_WEIGHT, CROP_WEIGHT = 0.6, 0.8
 BOOM_PROB, BOOM_SIZE = 0.30, 0.30         # each cash crop, each season
 NOISE = 0.15                              # per crop, uniform in [-NOISE, NOISE]
 KHARIF_WAVE = 0.4                         # Kharif crops in a Kharif season: +0.4 x volatility
@@ -67,18 +71,19 @@ def draw_season(params, t, rng):
     the history and the parameter-aware oracle's scenarios all call this."""
     kharif_season = t % 2 == 1
     bad = (not kharif_season) and rng.random() < BAD_RABI_PROB
-    shock = rng.choice(SHOCKS)
+    market = rng.choice(SHOCKS)
     prices = {}
     for c in ALL_CROPS:
         vol = params["volatilities"][c]
         wave = KHARIF_WAVE * vol if (kharif_season and c in KHARIF_CROPS) else 0.0
         boom = BOOM_SIZE if (c in CASH_CROPS and rng.random() < BOOM_PROB) else 0.0
+        shock = MARKET_WEIGHT * market + CROP_WEIGHT * rng.choice(SHOCKS)
         p = max(1, int(round(params["base_prices"][c] * (1.0 + wave + shock * vol + boom
                                                           + rng.uniform(-NOISE, NOISE)))))
         if bad and c in RABI_CROPS:
             p = max(1, int(round(p * BAD_RABI_FACTOR)))
         prices[c] = p
-    return prices, {"shock": shock, "bad": bad}
+    return prices, {"market_shock": market, "bad": bad}
 
 
 def generate_instance(seed):

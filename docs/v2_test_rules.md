@@ -58,4 +58,16 @@ Scoring of real model runs (headline metric, the 5-game protocol, the notes file
 committed before the first model run.
 
 ## Changes
-(none)
+### Version 2 — 2026-10-31, after the first test (code 6293054) failed rules 2 and 4
+First-test result: W_cv / W_pa = 1.034 (rule 2 fail); sd of W / W_pa = 0.17 greedy, 0.19 cautious
+(rule 4 fail); rules 1 and 3 passed; ruin in 0% of games. Kept on record in results/v2_first_test.json.
+
+Change 1 (rule 2): price shocks become partly crop-specific. Each season, each crop's shock =
+0.6 × one market-wide draw + 0.8 × its own independent draw, both from {−0.40, −0.20, 0, +0.25, +0.45},
+scaled by the crop's volatility. The spread of each crop's shock is unchanged (0.6² + 0.8² = 1); its
+mean moves from +0.020 to +0.028. Hypothesis: with one market-wide shock all crops move together, so
+knowing the future rarely changes which crop is best.
+
+Change 2 (capital / downside): PENDING Danish's decision.
+
+The test, strategies and kill rules 1–4 are unchanged. Rerun on seeds 0–199 after this version is committed.
