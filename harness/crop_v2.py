@@ -3,7 +3,7 @@
 Changes from v1 (harness/crop_planning.py, which is untouched):
   1. capital compounds: capital_{t+1} = capital_t + profit_t, no per-season refill
   2. ruin: capital below one cell of the season's cheapest crop -> idle for the rest of the game
-  3. each Rabi season is bad with probability 0.2: every Rabi price x0.7, nothing else changes
+  3. each Rabi season is bad with probability 0.2: every Rabi price x0.5, nothing else changes
   4. no seasonal Rabi price bias (v1 lowered Rabi prices by 0.16 x volatility every season)
   5. the two seasons of price history come from the same process as future prices
 
@@ -24,7 +24,7 @@ MARKET_WEIGHT, CROP_WEIGHT = 0.6, 0.8
 BOOM_PROB, BOOM_SIZE = 0.30, 0.30         # each cash crop, each season
 NOISE = 0.15                              # per crop, uniform in [-NOISE, NOISE]
 KHARIF_WAVE = 0.4                         # Kharif crops in a Kharif season: +0.4 x volatility
-BAD_RABI_PROB, BAD_RABI_FACTOR = 0.2, 0.7
+BAD_RABI_PROB, BAD_RABI_FACTOR = 0.2, 0.5     # factor 0.7 in rules version 1
 
 
 def season_crops(t):
@@ -60,7 +60,7 @@ def generate_params(seed):
         factor = rng.uniform(0.55, 0.85) if t % 2 == 1 else rng.uniform(0.35, 0.65)
         water_budgets.append(int(A * sum(waters[c] for c in crops) / 6.0 * factor))
     avg_cost = sum(costs[c] for c in KHARIF_CROPS) / 6.0
-    start_capital = int(A * avg_cost * rng.uniform(0.65, 0.95))
+    start_capital = int(A * avg_cost * rng.uniform(0.35, 0.55))   # 0.65-0.95 in rules version 1
     return {"seed": seed, "land_cells": A, "waters": waters, "costs": costs, "base_prices": base,
             "volatilities": vol, "nitrogen_deltas": dict(NITROGEN_DELTA), "water_budgets": water_budgets,
             "start_capital": start_capital, "initial_nitrogen": 50, "num_seasons": NUM_SEASONS}

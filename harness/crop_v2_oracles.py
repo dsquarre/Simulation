@@ -170,11 +170,9 @@ class ParamAware:
             V[N] = np.where(ruined, g, q)     # ruin is absorbing: wealth stays as it is
         return V
 
-    def act(self, t, N, W):
-        """Best allocation at the real state, from a richer set than the backward pass used."""
+    def _act_q(self, t, N, W):
+        """Candidate allocations at the real state and their expected final wealth."""
         inst = self.inst
-        if W < min_cost(inst, t) or N <= 0:
-            return {}
         crops = season_crops(t)
         y = get_yield_multiplier(N)
         mean_rev = np.round(self.act_samples[t] * y).mean(axis=0)
@@ -182,6 +180,11 @@ class ParamAware:
         allocs = _dedupe(self.actions[t].allocs + candidate_allocations(inst, t, pair_step=1)
                          + lagrangian_allocations(inst, t, vals, W))
         acts = Actions(inst, t, allocs)
-        q = self._q(t, N, np.array([float(W)]), acts, self.act_samples[t])[0]
-        return allocs[int(np.argmax(q))]
+        return allocs, self._q(t, N, np.array([float(W)]), acts, self.act_samples[t])[0]
 
+    def act(self, t, N, W):
+        """Best allocation at the real state, from a richer set than the backward pass used."""
+        if W < min_cost(self.inst, t) or N <= 0:
+            return {}
+        allocs, q = self._act_q(t, N, W)
+        return allocs[int(np.argmax(q))]

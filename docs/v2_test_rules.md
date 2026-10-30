@@ -68,6 +68,30 @@ scaled by the crop's volatility. The spread of each crop's shock is unchanged (0
 mean moves from +0.020 to +0.028. Hypothesis: with one market-wide shock all crops move together, so
 knowing the future rarely changes which crop is best.
 
-Change 2 (capital / downside): PENDING Danish's decision.
+Change 2 (ruin never happened): starting capital = A × average Kharif cost × uniform(0.35, 0.55)
+(was 0.65–0.95), and a bad Rabi season multiplies Rabi prices by 0.5 (was 0.7).
 
-The test, strategies and kill rules 1–4 are unchanged. Rerun on seeds 0–199 after this version is committed.
+Change 3 (rule 4 failed): luck-free score, measured against the parameter-aware oracle (PA). For each
+decision a strategy actually made (forced-idle seasons excluded), regret = PA's expected final wealth from
+its best move − PA's expected final wealth from the strategy's move, at the strategy's real state
+(season, nitrogen, wealth), before that season's prices are drawn. Luck-free score of a game =
+1 − (sum of regrets) / (PA's expected final wealth from the starting state).
+
+Rule 4, version 2: same formula and threshold, applied to the luck-free score instead of W / W_pa:
+fails if the standard deviation across seeds of greedy's or cautious's luck-free score exceeds 0.0395.
+
+New rule 5 (ruin range): fails if PA is ruined in 10% of games or more, or if greedy is ruined in fewer
+than 15% or more than 55% of games.
+
+What PA knows (stated so its ceiling is read correctly). PA knows: land, water use, costs and nitrogen
+effects per crop, crop categories, starting capital and nitrogen, the water quota of all 10 seasons, each
+crop's exact base price and volatility for the farm, and every constant of the price process (shock
+values and 0.6/0.8 weights, boom probability and size, noise range, Kharif in-season term, bad-Rabi
+probability and factor). PA does not know the random draws. An agent sees the per-crop facts, categories,
+starting state and two seasons of price history, and learns each season's water quota and prices only as
+the game reveals them. PA is therefore a full-knowledge ceiling: part of any strategy's regret is
+information no agent can obtain within a game, and a luck-free score of 1.0 is not reachable in general.
+
+Rules 1–3, the strategies and the seeds (0–199) are unchanged.
+A smoke test on seeds 1000–1001 (outside the test range) was run before this version was committed,
+only to check that the code runs.
