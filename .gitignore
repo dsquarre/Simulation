@@ -9,3 +9,6 @@ __pycache__/
 
 # static web build (python3 build_web.py)
 web/
+
+# personal dated plan log
+PLAN.md
