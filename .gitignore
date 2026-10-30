@@ -1,0 +1,11 @@
+.env
+logs/*
+!logs/.gitkeep
+inputs/*
+!inputs/README.md
+!inputs/.gitkeep
+__pycache__/
+*.pyc
+
+# static web build (python3 build_web.py)
+web/

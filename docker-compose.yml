@@ -1,0 +1,53 @@
+# One command builds everything and runs the whole flow:
+#
+#   docker compose up --build --abort-on-container-exit --exit-code-from harness
+#
+# Inside the harness container the order is: oracle check -> no-op check -> model run.
+
+name: rl-env-template
+
+services:
+  sandbox:                       # where the agent's tools run
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox
+    networks: [isolated]         # internal network only: no internet access
+    init: true                   # forwards SIGTERM so the sandbox stops at once instead of being killed after 10s
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  harness:                       # verifier, baselines and the model loop
+    build:
+      context: .
+      dockerfile: Dockerfile.harness
+    depends_on:
+      sandbox:
+        condition: service_healthy
+    networks: [isolated, internet]
+    stdin_open: true
+    tty: true
+    environment:
+      MODEL: ${MODEL:-mock/solver}
+      API_KEY: ${API_KEY:-}
+      BASE_URL: ${BASE_URL:-}
+      MAX_TOKENS: ${MAX_TOKENS:-}
+      TASK_ID: ${TASK_ID:-crop_planning}
+      SEED: ${SEED:-0}
+      MODE: ${MODE:-full}
+      APPEND_FILE: ${APPEND_FILE:-}
+      SANDBOX_URL: http://sandbox:8000
+    volumes:
+      - ./logs:/app/logs
+      - ./inputs:/app/inputs:ro
+
+networks:
+  isolated:
+    internal: true               # no route to the internet
+  internet: {}
