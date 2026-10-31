@@ -26,7 +26,7 @@ env["SANDBOX_URL"] = f"http://127.0.0.1:{port}"
 env["TASK_ID"] = task_id
 env["SEED"] = str(seed)
 env["MODE"] = "full"
-env["MODEL"] = "mock/solver"
+env["MODEL"] = "human/solver"
 
 print(f"Starting sandbox server on :{port} (workspace: {ws_dir})...")
 server = subprocess.Popen([sys.executable, "-m", "sandbox.server"], env=env)

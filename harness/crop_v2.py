@@ -125,18 +125,25 @@ class Game:
     def check(self, alloc):
         """Error text for an illegal allocation, else None."""
         inst, t = self.inst, self.t
+        for c, n in alloc.items():
+            if not isinstance(n, int) or isinstance(n, bool) or n < 0:
+                return f"cell count for '{c}' must be a whole number >= 0, got {n!r}"
         alloc = {c: n for c, n in alloc.items() if n}
         if self.must_idle() and alloc:
-            return "must idle (ruined or nitrogen exhausted)"
-        for c, n in alloc.items():
-            if c not in season_crops(t) or not isinstance(n, int) or n < 0:
-                return f"bad entry {c}: {n}"
-        if sum(alloc.values()) > inst["land_cells"]:
-            return "land overflow"
-        if sum(n * inst["waters"][c] for c, n in alloc.items()) > inst["water_budgets"][t - 1]:
-            return "water overflow"
-        if sum(n * inst["costs"][c] for c, n in alloc.items()) > self.capital:
-            return "capital overflow"
+            why = "you are ruined (capital too low to plant)" if self.ruined else "soil nitrogen is 0"
+            return f"{why}: all land must stay idle, submit {{}}"
+        for c in alloc:
+            if c not in season_crops(t):
+                return f"'{c}' cannot be planted in season {t}; allowed: {', '.join(season_crops(t))}"
+        land = sum(alloc.values())
+        if land > inst["land_cells"]:
+            return f"land overflow: {land} cells used, the farm has {inst['land_cells']}"
+        water = sum(n * inst["waters"][c] for c, n in alloc.items())
+        if water > inst["water_budgets"][t - 1]:
+            return f"water overflow: {water} units used, this season's quota is {inst['water_budgets'][t - 1]}"
+        cost = sum(n * inst["costs"][c] for c, n in alloc.items())
+        if cost > self.capital:
+            return f"capital overflow: planting costs {cost}, you have {self.capital}"
         return None
 
     def step(self, alloc):

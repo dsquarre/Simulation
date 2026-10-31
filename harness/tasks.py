@@ -2,6 +2,7 @@
 
 Registered Tasks:
   1. crop_planning: Multi-Season Crop Rotation & Market POMDP with Dynamic Soil Nitrogen (Primary Demo, Hard)
+  1b. crop_planning_v2: compounding capital, ruin, crop-specific price shocks (harness/crop_v2.py)
   2. box_packing: 3D Discrete Box Packing with Spatial Incompatibilities (Combinatorial Optimization, Hard)
 """
 import textwrap
@@ -42,8 +43,14 @@ def box_packing_task(seed):
     return _bpt(seed)
 
 
+def crop_planning_v2_task(seed):
+    from .crop_v2_task import crop_v2_task
+    return crop_v2_task(seed)
+
+
 TASKS = {
     "crop_planning": crop_planning_task,
+    "crop_planning_v2": crop_planning_v2_task,
     "box_packing": box_packing_task,
 }
 DEMO_TASK = "crop_planning"

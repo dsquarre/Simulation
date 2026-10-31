@@ -27,6 +27,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.harness
+      args:
+        EXTRAS: ${EXTRAS:-}
     depends_on:
       sandbox:
         condition: service_healthy
@@ -42,6 +44,8 @@ services:
       SEED: ${SEED:-0}
       MODE: ${MODE:-full}
       APPEND_FILE: ${APPEND_FILE:-}
+      RUNNER: ${RUNNER:-loop}
+      CLIENT: ${CLIENT:-openai}
       SANDBOX_URL: http://sandbox:8000
     volumes:
       - ./logs:/app/logs

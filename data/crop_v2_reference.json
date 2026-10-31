@@ -1,0 +1,253 @@
+{
+ "seeds": {
+  "0": {
+   "pa_wealth": 16218,
+   "pa_schedule": [
+    {
+     "cotton": 1,
+     "soybean": 14
+    },
+    {
+     "mustard": 8,
+     "potato": 6
+    },
+    {
+     "cotton": 11,
+     "sugarcane": 3
+    },
+    {
+     "chickpea": 14
+    },
+    {
+     "cotton": 14,
+     "groundnut": 3
+    },
+    {
+     "chickpea": 12,
+     "mustard": 1
+    },
+    {
+     "cotton": 15
+    },
+    {
+     "chickpea": 17
+    },
+    {
+     "cotton": 14,
+     "sugarcane": 2
+    },
+    {
+     "potato": 9
+    }
+   ]
+  },
+  "1": {
+   "pa_wealth": 6117,
+   "pa_schedule": [
+    {
+     "groundnut": 21,
+     "soybean": 2
+    },
+    {
+     "lentil": 18
+    },
+    {
+     "soybean": 11,
+     "sugarcane": 8
+    },
+    {
+     "barley": 1,
+     "lentil": 20
+    },
+    {
+     "soybean": 17,
+     "sugarcane": 9
+    },
+    {
+     "lentil": 20,
+     "mustard": 1
+    },
+    {
+     "soybean": 9,
+     "sugarcane": 8
+    },
+    {
+     "lentil": 14
+    },
+    {
+     "cotton": 20
+    },
+    {}
+   ]
+  },
+  "2": {
+   "pa_wealth": 9047,
+   "pa_schedule": [
+    {
+     "rice": 3,
+     "soybean": 15
+    },
+    {
+     "chickpea": 7,
+     "potato": 7
+    },
+    {
+     "rice": 13,
+     "soybean": 1
+    },
+    {
+     "chickpea": 7,
+     "potato": 7
+    },
+    {
+     "rice": 14
+    },
+    {
+     "chickpea": 3,
+     "potato": 5
+    },
+    {
+     "rice": 14,
+     "soybean": 2
+    },
+    {
+     "chickpea": 2,
+     "potato": 6
+    },
+    {
+     "rice": 12
+    },
+    {
+     "potato": 10
+    }
+   ]
+  },
+  "3": {
+   "pa_wealth": 10029,
+   "pa_schedule": [
+    {
+     "groundnut": 6,
+     "sugarcane": 5
+    },
+    {
+     "chickpea": 12,
+     "lentil": 8
+    },
+    {
+     "sugarcane": 10
+    },
+    {
+     "lentil": 4,
+     "mustard": 14
+    },
+    {
+     "sugarcane": 8
+    },
+    {
+     "lentil": 8,
+     "mustard": 4
+    },
+    {
+     "groundnut": 1,
+     "sugarcane": 8
+    },
+    {
+     "lentil": 7,
+     "mustard": 2
+    },
+    {
+     "groundnut": 2,
+     "sugarcane": 10
+    },
+    {
+     "lentil": 14
+    }
+   ]
+  },
+  "4": {
+   "pa_wealth": 15296,
+   "pa_schedule": [
+    {
+     "cotton": 6,
+     "soybean": 4
+    },
+    {
+     "chickpea": 15,
+     "potato": 1
+    },
+    {
+     "cotton": 15,
+     "groundnut": 8
+    },
+    {
+     "chickpea": 15
+    },
+    {
+     "cotton": 16,
+     "groundnut": 7
+    },
+    {
+     "chickpea": 17,
+     "lentil": 1
+    },
+    {
+     "cotton": 18,
+     "soybean": 2
+    },
+    {
+     "chickpea": 24
+    },
+    {
+     "cotton": 18
+    },
+    {}
+   ]
+  },
+  "5": {
+   "pa_wealth": 10790,
+   "pa_schedule": [
+    {
+     "groundnut": 10,
+     "soybean": 9
+    },
+    {
+     "chickpea": 7,
+     "potato": 5
+    },
+    {
+     "cotton": 7,
+     "soybean": 10
+    },
+    {
+     "chickpea": 4,
+     "potato": 5
+    },
+    {
+     "cotton": 8,
+     "soybean": 10
+    },
+    {
+     "chickpea": 4,
+     "potato": 4
+    },
+    {
+     "cotton": 11,
+     "soybean": 3
+    },
+    {
+     "chickpea": 12,
+     "potato": 1
+    },
+    {
+     "cotton": 8,
+     "soybean": 3
+    },
+    {
+     "chickpea": 1,
+     "potato": 4
+    }
+   ]
+  }
+ },
+ "oracle": "ParamAware(scenarios=32, act_scenarios=256, grid=40, pair_step=2)"
+}

@@ -362,6 +362,10 @@ class CropPlanningTaskInstance(TaskInstance):
         self.history = list(self.inst["prior_price_history"])
         self.is_finished = False
 
+    @property
+    def hint_schedule(self):
+        return self.inst["optimal_schedule"]
+
     def played_solution(self) -> str:
         """solution.json content for the seasons actually played through plant_season."""
         return json.dumps({"seasons": self.log}, indent=2)

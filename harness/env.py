@@ -53,6 +53,8 @@ class Env:
           no_regressions = 0.3 x share of regression checks that pass, but only
                            in proportion to target progress, so doing nothing earns 0
         """
+        if hasattr(self.task, "score_played"):
+            return self.task.score_played()      # the task holds the played game; nothing to verify in the sandbox
         if hasattr(self.task, "played_solution"):
             # Tasks played through a tool are scored on the harness-side record of what was
             # played. Rewriting the file here undoes any edit the agent made to it.

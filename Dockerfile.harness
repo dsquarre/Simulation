@@ -7,9 +7,12 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_RETRIES=10 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
-COPY requirements.txt .
+COPY requirements.txt requirements-langgraph.txt ./
+# EXTRAS=langgraph installs the LangGraph/LangChain stack instead (RUNNER=langgraph, CLIENT=langchain).
+ARG EXTRAS=""
 # The cache mount keeps downloaded wheels between rebuilds without putting them in the image.
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
+    if [ "$EXTRAS" = "langgraph" ]; then pip install -r requirements-langgraph.txt; \
+    else pip install -r requirements.txt; fi
 COPY harness ./harness
 CMD ["python", "-m", "harness.run"]

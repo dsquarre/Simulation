@@ -68,15 +68,76 @@ class OpenAIClient:
                      tokens=getattr(usage, "total_tokens", 0) or 0)
 
 
+class LangChainClient:
+    """The same job as OpenAIClient, done through LangChain (CLIENT=langchain).
+
+    LangChain has its own message classes instead of plain dicts:
+        {"role": "system"}     -> SystemMessage
+        {"role": "user"}       -> HumanMessage
+        {"role": "assistant"}  -> AIMessage (tool requests in .tool_calls, args already parsed to a dict)
+        {"role": "tool"}       -> ToolMessage (linked to its request by tool_call_id)
+    The harness keeps its dict history, so this class converts on the way in and on the way out.
+    """
+
+    def __init__(self, model, api_key, base_url=None, max_tokens=None):
+        from langchain_openai import ChatOpenAI
+        self.llm = ChatOpenAI(model=model, api_key=api_key, base_url=base_url or None,
+                              max_tokens=max_tokens, max_retries=2, timeout=120)
+        self.bound = None
+
+    def start(self, task):
+        pass
+
+    @staticmethod
+    def to_langchain(messages):
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+        out = []
+        for m in messages:
+            if m["role"] == "system":
+                out.append(SystemMessage(m["content"]))
+            elif m["role"] == "user":
+                out.append(HumanMessage(m["content"]))
+            elif m["role"] == "assistant":
+                calls = [{"name": c["function"]["name"], "args": json.loads(c["function"]["arguments"]),
+                          "id": c["id"]} for c in m.get("tool_calls", [])]
+                out.append(AIMessage(content=m["content"] or "", tool_calls=calls))
+            else:
+                out.append(ToolMessage(content=m["content"], tool_call_id=m["tool_call_id"]))
+        return out
+
+    @staticmethod
+    def from_langchain(message):
+        """AIMessage -> Reply. Calls whose arguments were not valid JSON land in invalid_tool_calls with
+        the raw text; they are passed on as-is so the harness reports them as unparsable."""
+        calls = [ToolCall(c["id"] or f"call_{i}", c["name"] or "", json.dumps(c["args"]))
+                 for i, c in enumerate(message.tool_calls)]
+        calls += [ToolCall(c.get("id") or f"bad_{i}", c.get("name") or "", c.get("args") or "")
+                  for i, c in enumerate(message.invalid_tool_calls)]
+        text = message.content
+        if isinstance(text, list):      # some providers return a list of content parts
+            text = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in text)
+        usage = message.usage_metadata or {}
+        return Reply(text=text or None, tool_calls=calls, raw=message.model_dump_json(),
+                     tokens=usage.get("total_tokens", 0))
+
+    def complete(self, messages, tools, timeout):
+        # timeout is fixed at 120 s in __init__ (the runner's per-call maximum)
+        if self.bound is None:
+            self.bound = self.llm.bind_tools(tools)       # tells the model which tools exist
+        return self.from_langchain(self.bound.invoke(self.to_langchain(messages)))
+
+
 # ------------------------------------------------------------ mock models
 class MockClient:
-    """Offline stand-ins so the template runs with no API key.
+    """Offline stand-ins so the harness runs with no API key.
 
-    mock/solver  you play as the model. crop_planning: you see exactly the messages and tools the
-                 model sees and type tool calls (see _read_command); Enter plays the optimal move.
-                 box_packing asks for the whole packing. With no terminal, the reference answer
-                 is submitted.
-    mock/idle    finishes immediately without doing anything.
+    mock/solver   plays the reference answer automatically, no input needed: crop tasks plant the
+                  reference schedule one season per turn through plant_season, other tasks write
+                  the reference files. Then finishes.
+    mock/idle     finishes immediately without doing anything.
+    human/solver  you play as the model. Crop tasks: you see exactly the messages and tools the
+                  model sees and type tool calls (see _read_command); Enter plays the reference move.
+                  box_packing asks for the whole packing. With no terminal, Enter is assumed.
     """
 
     def __init__(self, kind):
@@ -90,10 +151,13 @@ class MockClient:
     def complete(self, messages, tools, timeout):
         self.turn += 1
         calls = []
-        if self.kind == "solver" and self.task and self.task.task_id == "crop_planning":
+        crop = self.task is not None and self.task.task_id.startswith("crop_planning")
+        if self.kind == "human" and crop:
             calls = self._crop_turn(messages, tools)
-        elif self.kind == "solver" and self.turn == 1:
-            if self.task and self.task.task_id == "box_packing":
+        elif self.kind == "solver" and crop:
+            calls = [self._reference_move()]
+        elif self.kind in ("solver", "human") and self.turn == 1:
+            if self.kind == "human" and self.task and self.task.task_id == "box_packing":
                 print("\n" + "=" * 70, flush=True)
                 print(f" [HUMAN AS LLM INTERACTIVE SOLVER - {self.task.task_id.upper()}]", flush=True)
                 print("=" * 70, flush=True)
@@ -126,17 +190,23 @@ class MockClient:
             else:
                 for path, content in self.task.reference.items():
                     calls.append(("write_file", {"path": path, "content": content}))
-                calls.append(("run_python", {"code": "print('checked')"}))
+                calls.append(("finish", {}))
         else:
             calls.append(("finish", {}))
         tool_calls = [ToolCall(f"mock-{self.turn}-{i}", name, json.dumps(args))
                       for i, (name, args) in enumerate(calls)]
         return Reply(text=None, tool_calls=tool_calls, raw=json.dumps({"mock": self.kind, "turn": self.turn}))
 
+    def _reference_move(self):
+        """The reference schedule's move for the current season, or finish when the game is over."""
+        if self.task.is_finished:
+            return "finish", {}
+        return "plant_season", {"allocation": json.dumps(self.task.hint_schedule[self.task.current_season - 1])}
+
     def _crop_turn(self, messages, tools):
         """Show what the model would see since its last reply, then read one tool call."""
         if self.turn == 1:
-            print("\n" + "=" * 70 + "\n [YOU ARE THE MODEL - CROP_PLANNING]\n" + "=" * 70, flush=True)
+            print("\n" + "=" * 70 + f"\n [YOU ARE THE MODEL - {self.task.task_id.upper()}]\n" + "=" * 70, flush=True)
             print("[tools]", flush=True)
             for spec in tools:
                 f = spec["function"]
@@ -147,11 +217,7 @@ class MockClient:
             last = max(i for i, m in enumerate(messages) if m["role"] == "assistant")
             for m in messages[last + 1:]:
                 print(f"\n[{m['role']}]\n{m['content']}", flush=True)
-        if self.task.is_finished:
-            default = ("finish", {})
-        else:
-            default = ("plant_season", {"allocation": json.dumps(
-                self.task.inst["optimal_schedule"][self.task.current_season - 1])})
+        default = self._reference_move()
         print("=" * 70, flush=True)
         print("Your tool call:  plant_season {\"rice\": 10}  |  run_python print(1+1)  |  read_file notes.txt\n"
               "                 write_file notes.txt  |  list_files  |  finish  |  bare {...} = plant_season\n"
@@ -206,14 +272,18 @@ class MockClient:
         return name, {}
 
 
-def make_client(model, api_key, base_url, max_tokens=None):
+def make_client(model, api_key, base_url, max_tokens=None, library="openai"):
+    if model == "human/solver":
+        return MockClient("human")
     if model.startswith("mock/"):
         kind = model.split("/", 1)[1]
         if kind not in ("solver", "idle"):
-            raise ValueError("mock models are 'mock/solver' and 'mock/idle'")
+            raise ValueError("offline models are 'mock/solver', 'mock/idle' and 'human/solver'")
         return MockClient(kind)
     if not api_key:
         raise ValueError("API_KEY is not set")
+    if library == "langchain":
+        return LangChainClient(model, api_key, base_url, max_tokens)   # needs requirements-langgraph.txt
     return OpenAIClient(model, api_key, base_url, max_tokens)
 
 

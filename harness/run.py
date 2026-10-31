@@ -117,7 +117,8 @@ def main():
         print(f"unknown TASK_ID '{task_id}'. Available: {', '.join(TASKS)}")
         return 3
     try:
-        client = None if mode == "baselines" else make_client(model, api_key, base_url, int(setting("MAX_TOKENS", "0")) or None)
+        client = None if mode == "baselines" else make_client(model, api_key, base_url, int(setting("MAX_TOKENS", "0")) or None,
+                                                                   setting("CLIENT", "openai"))
     except ValueError as exc:
         print(f"configuration error: {exc}")
         return 3
